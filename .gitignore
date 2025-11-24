@@ -23,5 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-contenido.py
-contenido.txt
+.env
+.env.local
+.env.*.local
