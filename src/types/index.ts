@@ -4,6 +4,7 @@ export interface SearchResult {
   url: string;
   thumbnail_url: string;
   similarity_score: number;
+  description?: string;
   metadata?: {
     width: number;
     height: number;
@@ -35,4 +36,31 @@ export interface UploadResponse {
   message: string;
   image_id?: string;
   filename?: string;
+  status?: string;
+  similarity_score?: number;
+  required_similarity?: number;
+  banned_words?: string[];
+}
+
+export interface SimilarityValidationResult {
+  is_valid: boolean;
+  similarity_score: number;
+  threshold: number;
+  message: string;
+}
+
+export interface AdminImage {
+  id: string;
+  filename: string;
+  description?: string;
+  thumbnail_url: string;
+  metadata: {
+    width: number;
+    height: number;
+    size: number;
+    format: string;
+    created_at: string;
+    similarity_score?: number;
+  };
+  vector_id: string;
 }

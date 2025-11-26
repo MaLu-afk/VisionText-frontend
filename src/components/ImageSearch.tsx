@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
-import { Search, Upload, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Search, Upload, Loader2, Image as ImageIcon, X, Sparkles } from 'lucide-react';
 import { searchByImage } from '../services/api';
-import type { SearchResult, SearchResponse } from '../types';
+import type { SearchResult } from '../types';
 
 export default function ImageSearch() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -18,7 +18,7 @@ export default function ImageSearch() {
       if (file.type.startsWith('image/')) {
         setSelectedImage(file);
         setError(null);
-        
+
         // Create preview
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -43,10 +43,9 @@ export default function ImageSearch() {
     setSearchStats(null);
 
     try {
-      const response: SearchResponse = await searchByImage({
-        image: selectedImage,
-        limit: 20,
-        threshold: 0.1
+      const response = await searchByImage({
+        image: selectedImage
+        // Usa el threshold por defecto del backend (configurado en .env)
       });
 
       setResults(response.results);
@@ -82,23 +81,32 @@ export default function ImageSearch() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Search Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center px-3 py-1 rounded-full bg-brand-gold-50 text-brand-gold-600 text-sm font-medium mb-2 border border-brand-gold-100">
+          <Sparkles className="w-4 h-4 mr-2" />
+          Búsqueda Visual
+        </div>
+        <h2 className="text-4xl font-bold text-slate-900 tracking-tight">
           Búsqueda por Imagen
         </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Sube una imagen y nuestro sistema encontrará imágenes visualmente similares usando inteligencia artificial
+        <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+          Sube una imagen y encuentra otras visualmente similares en nuestra base de datos.
         </p>
       </div>
 
       {/* Image Upload Area */}
       <div className="max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-8">
           {/* Upload Section */}
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+            <div
+              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${selectedImage
+                ? 'border-brand-red-300 bg-brand-red-50/50'
+                : 'border-slate-300 hover:border-brand-red-400 hover:bg-slate-50'
+                }`}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
@@ -107,69 +115,83 @@ export default function ImageSearch() {
                 className="hidden"
                 id="image-upload"
               />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer flex flex-col items-center space-y-2"
-              >
-                <Upload className="w-12 h-12 text-gray-400" />
-                <span className="text-gray-600">Haz clic para subir una imagen</span>
-                <span className="text-sm text-gray-500">o arrastra y suelta aquí</span>
-              </label>
-            </div>
 
-            {selectedImage && (
-              <div className="space-y-3">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-700 truncate">
-                    {selectedImage.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {(selectedImage.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-                <div className="flex space-x-2">
+              {!selectedImage ? (
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer flex flex-col items-center space-y-4"
+                >
+                  <div className="w-16 h-16 bg-brand-red-50 text-brand-red-600 rounded-full flex items-center justify-center mb-2">
+                    <Upload className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="block text-lg font-medium text-slate-900">Sube una imagen</span>
+                    <span className="block text-sm text-slate-500 mt-1">o arrastra y suelta aquí</span>
+                  </div>
+                </label>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-center space-x-4">
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+                        {selectedImage.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {(selectedImage.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <button
+                      onClick={clearImage}
+                      className="p-2 bg-white text-slate-500 rounded-full hover:bg-red-50 hover:text-red-500 border border-slate-200 transition-colors shadow-sm"
+                      title="Eliminar imagen"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
                   <button
                     onClick={handleSearch}
                     disabled={loading}
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    className="w-full bg-brand-red-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-brand-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all shadow-lg shadow-brand-red-100 flex items-center justify-center"
                   >
                     {loading ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Analizando...
+                      </>
                     ) : (
-                      <Search className="w-4 h-4 mr-2" />
+                      <>
+                        <Search className="w-5 h-5 mr-2" />
+                        Buscar Similares
+                      </>
                     )}
-                    Buscar similares
-                  </button>
-                  <button
-                    onClick={clearImage}
-                    disabled={loading}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Preview Section */}
           <div className="space-y-4">
             {imagePreview ? (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-gray-700">Vista previa</h3>
-                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+              <div className="space-y-2 animate-in fade-in zoom-in duration-300">
+                <h3 className="text-sm font-medium text-slate-700 ml-1">Vista previa</h3>
+                <div className="aspect-square bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 relative group">
                   <img
                     src={imagePreview}
                     alt="Preview"
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
                 </div>
               </div>
             ) : (
-              <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">La vista previa aparecerá aquí</p>
+              <div className="aspect-square bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200 border-dashed">
+                <div className="text-center p-6">
+                  <div className="w-16 h-16 bg-slate-200 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ImageIcon className="w-8 h-8" />
+                  </div>
+                  <p className="text-slate-500 text-sm">La vista previa aparecerá aquí</p>
                 </div>
               </div>
             )}
@@ -179,38 +201,38 @@ export default function ImageSearch() {
 
       {/* Error Message */}
       {error && (
-        <div className="max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
+        <div className="max-w-2xl mx-auto p-4 bg-red-50 border border-red-100 rounded-xl flex items-center text-brand-red-700 animate-in fade-in slide-in-from-top-2 shadow-sm">
+          <p className="font-medium">{error}</p>
         </div>
       )}
 
       {/* Search Stats */}
       {searchStats && (
-        <div className="max-w-2xl mx-auto p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-blue-700 text-sm">
-            Se encontraron <span className="font-semibold">{searchStats.count}</span> resultados en{' '}
-            <span className="font-semibold">{searchStats.time.toFixed(2)}s</span>
+        <div className="max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-top-2">
+          <p className="text-slate-500 text-sm bg-white/50 inline-block px-4 py-1 rounded-full backdrop-blur-sm border border-slate-200">
+            Encontrados <span className="font-semibold text-brand-red-600">{searchStats.count}</span> resultados en{' '}
+            <span className="font-semibold text-brand-red-600">{searchStats.time.toFixed(2)}s</span>
           </p>
         </div>
       )}
 
       {/* Results Grid */}
       {results.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">Imágenes similares encontradas</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <h3 className="text-xl font-bold text-slate-900 px-1">Resultados Similares</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {results.map((result) => (
               <div
                 key={result.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden image-card cursor-pointer"
+                className="bg-white rounded-2xl overflow-hidden card-hover border border-slate-100 cursor-pointer group"
                 onClick={() => window.open(result.url, '_blank')}
               >
-                <div className="aspect-square relative bg-gray-100">
+                <div className="aspect-square relative bg-slate-100 overflow-hidden">
                   {result.thumbnail_url ? (
                     <img
                       src={result.thumbnail_url}
                       alt={result.filename}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -218,19 +240,26 @@ export default function ImageSearch() {
                       }}
                     />
                   ) : null}
-                  <div className="absolute inset-0 grid place-items-center">
-                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                  {/* Removed ImageIcon watermark */}
+
+                  {/* Similarity Badge */}
+                  <div className="absolute top-3 right-3">
+                    <div className="bg-brand-red-600/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg border border-white/10">
+                      {formatSimilarity(result.similarity_score)}
+                    </div>
                   </div>
-                  <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-                    {formatSimilarity(result.similarity_score)}
-                  </div>
+
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-red-700/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
-                <div className="p-3">
-                  <p className="text-sm text-gray-700 truncate font-medium">{result.filename}</p>
+
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold text-slate-900 truncate mb-1 group-hover:text-brand-red-600 transition-colors">{result.filename}</h3>
                   {result.metadata && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {result.metadata.width}×{result.metadata.height} • {(result.metadata.size / 1024).toFixed(1)}KB
-                    </p>
+                    <div className="flex items-center justify-between text-xs text-slate-500">
+                      <span>{result.metadata.width} × {result.metadata.height}</span>
+                      <span className="bg-slate-100 px-2 py-0.5 rounded-full">{(result.metadata.size / 1024).toFixed(0)} KB</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -241,9 +270,12 @@ export default function ImageSearch() {
 
       {/* Loading State */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
-          <p className="text-gray-600">Analizando imagen y buscando similares...</p>
+        <div className="flex flex-col items-center justify-center py-20 animate-in fade-in">
+          <div className="relative">
+            <div className="absolute inset-0 bg-brand-red-100 rounded-full blur-xl opacity-50 animate-pulse"></div>
+            <Loader2 className="w-12 h-12 animate-spin text-brand-red-600 relative z-10" />
+          </div>
+          <p className="text-slate-500 mt-4 font-medium">Analizando patrones visuales...</p>
         </div>
       )}
     </div>

@@ -1,1 +1,53 @@
 @import "tailwindcss";
+
+@theme {
+    --color-brand-red: #a52019;
+    --color-brand-gold: #F2A413;
+    --color-brand-red-50: #fbf4f4;
+    --color-brand-red-100: #f6e5e5;
+    --color-brand-red-600: #a52019;
+    --color-brand-red-700: #841a14;
+    --color-brand-gold-50: #fef9e7;
+    --color-brand-gold-100: #fdf2cf;
+    --color-brand-gold-500: #f2a413;
+    --color-brand-gold-600: #d98e0b;
+}
+
+@layer base {
+    html {
+        font-family: 'Inter', system-ui, sans-serif;
+        scroll-behavior: smooth;
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    html::-webkit-scrollbar {
+        display: none;
+        /* Chrome, Safari and Opera */
+    }
+
+    body {
+        @apply bg-slate-50 text-slate-900 antialiased;
+        -ms-overflow-style: none;
+        /* IE and Edge */
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    body::-webkit-scrollbar {
+        display: none;
+        /* Chrome, Safari and Opera */
+    }
+}
+
+@layer utilities {
+    .glass {
+        @apply bg-white/80 backdrop-blur-md border-b border-white/20;
+    }
+
+    .card-hover {
+        @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+    }
+}

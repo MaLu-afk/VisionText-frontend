@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Loader2, CheckCircle, X } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, X, AlertCircle } from 'lucide-react';
 import { uploadImage } from '../services/api';
 import type { UploadResponse } from '../types';
 
 export default function UploadComponent() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [descriptions, setDescriptions] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState<UploadResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -22,10 +23,17 @@ export default function UploadComponent() {
     }
 
     setSelectedFiles(validFiles);
+    setDescriptions(Array(validFiles.length).fill(''));
     
     // Create previews
     const newPreviews = validFiles.map(file => URL.createObjectURL(file));
     setPreviews(newPreviews);
+  };
+
+  const handleDescriptionChange = (index: number, description: string) => {
+    const newDescriptions = [...descriptions];
+    newDescriptions[index] = description;
+    setDescriptions(newDescriptions);
   };
 
   const handleUpload = async () => {
@@ -41,14 +49,34 @@ export default function UploadComponent() {
     try {
       const results: UploadResponse[] = [];
       
-      for (const file of selectedFiles) {
+      for (let i = 0; i < selectedFiles.length; i++) {
         try {
-          const result: UploadResponse = await uploadImage(file);
+          const formData = new FormData();
+          formData.append('image', selectedFiles[i]);
+          
+          const description = descriptions[i];
+          if (description && description.trim()) {
+            formData.append('description', description.trim());
+          }
+
+          console.log('Subiendo archivo:', selectedFiles[i].name, 'descripción:', description);
+          
+          const result: UploadResponse = await uploadImage(formData);
+          console.log('Resultado del upload:', result);
           results.push(result);
-        } catch (err) {
+          
+        } catch (err: any) {
+          console.error('Error específico en upload:', err);
+          
+          // Mejor manejo de errores
+          const errorMessage = err.response?.data?.detail || 
+                              err.response?.data?.message || 
+                              err.message || 
+                              'Error desconocido al subir la imagen';
+          
           results.push({
             success: false,
-            message: `Error al subir ${file.name}: ${err instanceof Error ? err.message : 'Error desconocido'}`
+            message: `Error al subir ${selectedFiles[i].name}: ${errorMessage}`
           });
         }
       }
@@ -60,24 +88,25 @@ export default function UploadComponent() {
       if (allSuccessful) {
         setSelectedFiles([]);
         setPreviews([]);
+        setDescriptions([]);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
       }
     } catch (err) {
+      console.error('Error general en upload:', err);
       setError('Error al subir las imágenes. Por favor intenta nuevamente.');
-      console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
   };
 
   const clearSelection = () => {
-    // Revoke all blob URLs to avoid memory leaks
     previews.forEach(preview => URL.revokeObjectURL(preview));
     
     setSelectedFiles([]);
     setPreviews([]);
+    setDescriptions([]);
     setUploadResults([]);
     setError(null);
     if (fileInputRef.current) {
@@ -86,14 +115,15 @@ export default function UploadComponent() {
   };
 
   const removeFile = (index: number) => {
-    // Revoke the blob URL to avoid memory leaks
     URL.revokeObjectURL(previews[index]);
     
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     const newPreviews = previews.filter((_, i) => i !== index);
+    const newDescriptions = descriptions.filter((_, i) => i !== index);
     
     setSelectedFiles(newFiles);
     setPreviews(newPreviews);
+    setDescriptions(newDescriptions);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -104,7 +134,7 @@ export default function UploadComponent() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Cleanup blob URLs on unmount
+
   useEffect(() => {
     return () => {
       previews.forEach(preview => URL.revokeObjectURL(preview));
@@ -119,7 +149,7 @@ export default function UploadComponent() {
           Subir Imágenes
         </h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Sube imágenes a la base de datos para que puedan ser encontradas mediante búsquedas de texto o imagen
+          Sube imágenes a la base de datos. Si agregas una descripción, el sistema validará que coincida con la imagen (mínimo 25% de similitud).
         </p>
       </div>
 
@@ -163,33 +193,58 @@ export default function UploadComponent() {
             </div>
 
             {/* Preview Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="relative group">
-                  <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                    <img
-                      src={previews[index]}
-                      alt={file.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <button
-                    onClick={() => removeFile(index)}
-                    disabled={uploading}
-                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="mt-2">
-                    <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
-                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                  <div className="flex space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={previews[index]}
+                          alt={file.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex-grow space-y-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">
+                          Descripción (opcional):
+                        </label>
+                        <textarea
+                          value={descriptions[index]}
+                          onChange={(e) => handleDescriptionChange(index, e.target.value)}
+                          placeholder="Describe lo que aparece en la imagen..."
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                          rows={2}
+                          disabled={uploading}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Si agregas una descripción, se validará que coincida con la imagen
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => removeFile(index)}
+                      disabled={uploading}
+                      className="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 disabled:text-gray-300 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Upload Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-4">
               <button
                 onClick={handleUpload}
                 disabled={uploading}
@@ -215,39 +270,54 @@ export default function UploadComponent() {
       {/* Error Message */}
       {error && (
         <div className="max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700">{error}</p>
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+            <p className="text-red-700">{error}</p>
+          </div>
         </div>
       )}
 
       {/* Upload Results */}
       {uploadResults.length > 0 && (
-        <div className="max-w-2xl mx-auto space-y-3">
-          <h3 className="text-lg font-medium text-gray-900">Resultados de la subida</h3>
-          {uploadResults.map((result, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border ${
-                result.success
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
-              }`}
-            >
-              <div className="flex items-center">
-                {result.success ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                ) : (
-                  <X className="w-5 h-5 text-red-600 mr-2" />
-                )}
-                <p className={`text-sm ${
-                  result.success ? 'text-green-700' : 'text-red-700'
-                }`}>
+      <div className="max-w-2xl mx-auto space-y-3">
+        <h3 className="text-lg font-medium text-gray-900">Resultados de la subida</h3>
+        {uploadResults.map((result, index) => (
+          <div
+            key={index}
+            className={`p-4 rounded-lg border ${
+              result.success
+                ? 'bg-green-50 border-green-200'
+                : 'bg-red-50 border-red-200'
+            }`}
+          >
+            <div className="flex items-center">
+              {result.success ? (
+                <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+              )}
+              <div>
+                <p className={`text-sm ${result.success ? 'text-green-700' : 'text-red-700'}`}>
                   {result.message}
                 </p>
+                // Mostrar claramente POR QUÉ falló
+                {result.banned_words && result.banned_words.length > 0 && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Contenido prohibido detectado: {result.banned_words.join(', ')}
+                  </p>
+                )}
+                {result.similarity_score !== undefined && result.required_similarity !== undefined && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Similitud insuficiente: {(result.similarity_score * 100).toFixed(1)}% 
+                    (mínimo requerido: {(result.required_similarity * 100).toFixed(1)}%)
+                  </p>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
+    )}
 
       {/* Loading State */}
       {uploading && (
