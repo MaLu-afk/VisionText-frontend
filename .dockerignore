@@ -1,0 +1,8 @@
+.git
+.github
+node_modules
+dist
+
+# Secretos y configuración local: VITE_API_URL llega como build arg
+.env
+.env.*

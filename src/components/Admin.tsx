@@ -1,36 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Trash2, Loader2, AlertCircle, LogOut } from 'lucide-react';
-import { getAllImagesAdmin, deleteImageAdmin } from '../services/api';
+import { getAllImagesAdmin, deleteImageAdmin, getAdminToken, clearAdminToken, isUnauthorized, getErrorDetail } from '../services/api';
 import AdminLogin from './AdminLogin';
 import type { AdminImage } from '../types';
 
 export default function Admin() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => getAdminToken() !== null);
     const [images, setImages] = useState<AdminImage[]>([]);
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Verificar si hay token guardado
-        const token = localStorage.getItem('admin_token');
-        if (token) {
-            setIsAuthenticated(true);
-            loadImages();
-        }
+    const handleLogout = useCallback(() => {
+        clearAdminToken();
+        setIsAuthenticated(false);
+        setImages([]);
     }, []);
 
-    const loadImages = async () => {
+    const loadImages = useCallback(async () => {
         setLoading(true);
         setError(null);
 
         try {
             const data = await getAllImagesAdmin();
             setImages(data.images);
-        } catch (err: any) {
-            if (err.response?.status === 401) {
-                // Token inválido, cerrar sesión
+        } catch (err) {
+            if (isUnauthorized(err)) {
+                // Token inválido o expirado, cerrar sesión
                 handleLogout();
             } else {
                 setError('Error al cargar imágenes');
@@ -38,7 +35,13 @@ export default function Admin() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [handleLogout]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            loadImages();
+        }
+    }, [isAuthenticated, loadImages]);
 
     const handleDelete = async (imageId: string) => {
         setDeleting(imageId);
@@ -46,19 +49,17 @@ export default function Admin() {
 
         try {
             await deleteImageAdmin(imageId);
-            setImages(images.filter(img => img.id !== imageId));
+            setImages(current => current.filter(img => img.id !== imageId));
             setDeleteConfirm(null);
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Error al eliminar imagen');
+        } catch (err) {
+            if (isUnauthorized(err)) {
+                handleLogout();
+            } else {
+                setError(getErrorDetail(err, 'Error al eliminar imagen'));
+            }
         } finally {
             setDeleting(null);
         }
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('admin_token');
-        setIsAuthenticated(false);
-        setImages([]);
     };
 
     const formatFileSize = (bytes: number): string => {
@@ -70,7 +71,7 @@ export default function Admin() {
     };
 
     if (!isAuthenticated) {
-        return <AdminLogin onLoginSuccess={() => { setIsAuthenticated(true); loadImages(); }} />;
+        return <AdminLogin onLoginSuccess={() => setIsAuthenticated(true)} />;
     }
 
     return (

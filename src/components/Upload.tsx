@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Upload, Loader2, CheckCircle, X, AlertCircle } from 'lucide-react';
-import { uploadImage } from '../services/api';
+import { uploadImage, getAdminToken, clearAdminToken, isUnauthorized, getErrorDetail } from '../services/api';
+import AdminLogin from './AdminLogin';
 import type { UploadResponse } from '../types';
 
 export default function UploadComponent() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => getAdminToken() !== null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [descriptions, setDescriptions] = useState<string[]>([]);
@@ -59,20 +61,18 @@ export default function UploadComponent() {
             formData.append('description', description.trim());
           }
 
-          console.log('Subiendo archivo:', selectedFiles[i].name, 'descripción:', description);
-          
           const result: UploadResponse = await uploadImage(formData);
-          console.log('Resultado del upload:', result);
           results.push(result);
           
-        } catch (err: any) {
-          console.error('Error específico en upload:', err);
-          
-          // Mejor manejo de errores
-          const errorMessage = err.response?.data?.detail || 
-                              err.response?.data?.message || 
-                              err.message || 
-                              'Error desconocido al subir la imagen';
+        } catch (err) {
+          if (isUnauthorized(err)) {
+            // Token expirado o inválido: volver a pedir login
+            clearAdminToken();
+            setIsAuthenticated(false);
+            break;
+          }
+
+          const errorMessage = getErrorDetail(err, 'Error desconocido al subir la imagen');
           
           results.push({
             success: false,
@@ -141,6 +141,15 @@ export default function UploadComponent() {
     };
   }, [previews]);
 
+  if (!isAuthenticated) {
+    return (
+      <AdminLogin
+        subtitle="Subir imágenes requiere una cuenta de administrador"
+        onLoginSuccess={() => setIsAuthenticated(true)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Upload Header */}
@@ -149,7 +158,7 @@ export default function UploadComponent() {
           Subir Imágenes
         </h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Sube imágenes a la base de datos. Si agregas una descripción, el sistema validará que coincida con la imagen (mínimo 25% de similitud).
+          Sube imágenes a la base de datos. Si agregas una descripción, el sistema validará que coincida con la imagen (mínimo 20% de similitud).
         </p>
       </div>
 
@@ -300,13 +309,13 @@ export default function UploadComponent() {
                 <p className={`text-sm ${result.success ? 'text-green-700' : 'text-red-700'}`}>
                   {result.message}
                 </p>
-                // Mostrar claramente POR QUÉ falló
+                {/* Mostrar claramente POR QUÉ falló */}
                 {result.banned_words && result.banned_words.length > 0 && (
                   <p className="text-xs text-red-600 mt-1">
                     Contenido prohibido detectado: {result.banned_words.join(', ')}
                   </p>
                 )}
-                {result.similarity_score !== undefined && result.required_similarity !== undefined && (
+                {!result.success && result.similarity_score != null && result.required_similarity != null && (
                   <p className="text-xs text-red-600 mt-1">
                     Similitud insuficiente: {(result.similarity_score * 100).toFixed(1)}% 
                     (mínimo requerido: {(result.required_similarity * 100).toFixed(1)}%)

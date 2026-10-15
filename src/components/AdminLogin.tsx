@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Shield, Loader2, AlertCircle } from 'lucide-react';
-import { adminLogin } from '../services/api';
+import { adminLogin, getErrorDetail, setAdminToken } from '../services/api';
 
 interface AdminLoginProps {
     onLoginSuccess: (token: string) => void;
+    subtitle?: string;
 }
 
-export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
+export default function AdminLogin({ onLoginSuccess, subtitle = 'Ingresa tus credenciales para continuar' }: AdminLoginProps) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -19,10 +20,10 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
 
         try {
             const response = await adminLogin(username, password);
-            localStorage.setItem('admin_token', response.access_token);
+            setAdminToken(response.access_token);
             onLoginSuccess(response.access_token);
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Credenciales incorrectas');
+        } catch (err) {
+            setError(getErrorDetail(err, 'Credenciales incorrectas'));
         } finally {
             setLoading(false);
         }
@@ -38,7 +39,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                         <Shield className="w-10 h-10 text-brand-red-600" />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900">Panel de Administración</h2>
-                    <p className="text-slate-500 text-sm mt-2">Ingresa tus credenciales para continuar</p>
+                    <p className="text-slate-500 text-sm mt-2 text-center">{subtitle}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">

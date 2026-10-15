@@ -1,0 +1,38 @@
+# Plantilla procesada por envsubst al arrancar el contenedor: solo se sustituyen
+# variables definidas en el entorno (${PORT}); las de nginx ($uri) quedan intactas.
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+
+    gzip on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    # Archivos con hash en el nombre (generados por Vite): cache largo
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # index.html nunca se cachea, para que cada despliegue se vea de inmediato
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    }
+
+    # Rutas de React Router (/admin, /upload, ...): se resuelven en el cliente
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    }
+}

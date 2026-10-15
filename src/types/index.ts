@@ -37,9 +37,10 @@ export interface UploadResponse {
   image_id?: string;
   filename?: string;
   status?: string;
-  similarity_score?: number;
-  required_similarity?: number;
-  banned_words?: string[];
+  similarity_score?: number | null;
+  required_similarity?: number | null;
+  banned_words?: string[] | null;
+  rejection_reason?: string | null;
 }
 
 export interface SimilarityValidationResult {

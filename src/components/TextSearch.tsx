@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Search, Loader2, Sparkles } from 'lucide-react';
 import { searchByText } from '../services/api';
-import type { SearchResponse } from '../types';
+import type { SearchResponse, SearchResult } from '../types';
 
 export default function TextSearch() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchStats, setSearchStats] = useState<{ count: number; time: number } | null>(null);

@@ -1,10 +1,45 @@
 import { useState } from 'react';
 import { Search, Image, Upload, Menu, X, Shield, Sparkles } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+interface NavButtonProps {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  activeTab: string;
+  onSelect: (id: string) => void;
+}
+
+const NavButton = ({ id, icon: Icon, label, activeTab, onSelect }: NavButtonProps) => (
+  <button
+    onClick={() => onSelect(id)}
+    className={`flex items-center justify-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 min-w-[110px] ${activeTab === id
+        ? 'bg-brand-red-600 text-white shadow-md shadow-brand-red-100'
+        : 'text-slate-600 hover:text-brand-red-600 hover:bg-brand-red-50'
+      }`}
+  >
+    <Icon className={`w-4 h-4 mr-2 ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-brand-red-600'}`} />
+    {label}
+  </button>
+);
+
+const MobileNavButton = ({ id, icon: Icon, label, activeTab, onSelect }: NavButtonProps) => (
+  <button
+    onClick={() => onSelect(id)}
+    className={`flex items-center w-full px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeTab === id
+        ? 'bg-brand-red-50 text-brand-red-700'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+      }`}
+  >
+    <Icon className={`w-5 h-5 mr-3 ${activeTab === id ? 'text-brand-red-600' : 'text-slate-400'}`} />
+    {label}
+  </button>
+);
 
 export default function Layout({ children }: LayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -29,31 +64,7 @@ export default function Layout({ children }: LayoutProps) {
     else if (tab === 'admin') navigate('/admin');
   };
 
-  const NavButton = ({ id, icon: Icon, label }: { id: string; icon: any; label: string }) => (
-    <button
-      onClick={() => handleTabChange(id)}
-      className={`flex items-center justify-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 min-w-[110px] ${activeTab === id
-          ? 'bg-brand-red-600 text-white shadow-md shadow-brand-red-100'
-          : 'text-slate-600 hover:text-brand-red-600 hover:bg-brand-red-50'
-        }`}
-    >
-      <Icon className={`w-4 h-4 mr-2 ${activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-brand-red-600'}`} />
-      {label}
-    </button>
-  );
-
-  const MobileNavButton = ({ id, icon: Icon, label }: { id: string; icon: any; label: string }) => (
-    <button
-      onClick={() => handleTabChange(id)}
-      className={`flex items-center w-full px-4 py-3 rounded-xl text-base font-medium transition-colors ${activeTab === id
-          ? 'bg-brand-red-50 text-brand-red-700'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-        }`}
-    >
-      <Icon className={`w-5 h-5 mr-3 ${activeTab === id ? 'text-brand-red-600' : 'text-slate-400'}`} />
-      {label}
-    </button>
-  );
+  const navProps = { activeTab, onSelect: handleTabChange };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -72,11 +83,11 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-2">
-              <NavButton id="text" icon={Search} label="Texto" />
-              <NavButton id="image" icon={Image} label="Imagen" />
-              <NavButton id="upload" icon={Upload} label="Subir" />
+              <NavButton id="text" icon={Search} label="Texto" {...navProps} />
+              <NavButton id="image" icon={Image} label="Imagen" {...navProps} />
+              <NavButton id="upload" icon={Upload} label="Subir" {...navProps} />
               <div className="w-px h-6 bg-slate-200 mx-2 self-center"></div>
-              <NavButton id="admin" icon={Shield} label="Admin" />
+              <NavButton id="admin" icon={Shield} label="Admin" {...navProps} />
             </nav>
 
             {/* Mobile menu button */}
@@ -95,11 +106,11 @@ export default function Layout({ children }: LayoutProps) {
         {isMenuOpen && (
           <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl absolute w-full shadow-xl">
             <div className="px-4 pt-2 pb-4 space-y-1">
-              <MobileNavButton id="text" icon={Search} label="Búsqueda por Texto" />
-              <MobileNavButton id="image" icon={Image} label="Búsqueda por Imagen" />
-              <MobileNavButton id="upload" icon={Upload} label="Subir Imágenes" />
+              <MobileNavButton id="text" icon={Search} label="Búsqueda por Texto" {...navProps} />
+              <MobileNavButton id="image" icon={Image} label="Búsqueda por Imagen" {...navProps} />
+              <MobileNavButton id="upload" icon={Upload} label="Subir Imágenes" {...navProps} />
               <div className="h-px bg-slate-100 my-2"></div>
-              <MobileNavButton id="admin" icon={Shield} label="Administración" />
+              <MobileNavButton id="admin" icon={Shield} label="Administración" {...navProps} />
             </div>
           </div>
         )}
